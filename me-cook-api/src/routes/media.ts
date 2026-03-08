@@ -262,7 +262,7 @@ mediaRouter.post(
         type: "IMAGE",
         originalUrl,
         playbackUrl: originalUrl,
-        uploadJobStatus: "COMPLETED",
+        uploadJobStatus: "READY",
       },
     });
     return res.status(201).json({
