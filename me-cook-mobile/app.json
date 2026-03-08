@@ -1,0 +1,70 @@
+{
+  "expo": {
+    "name": "MeCook",
+    "slug": "mecook",
+    "version": "1.0.0",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "orientation": "portrait",
+    "icon": "./assets/branding/mecook-logo.png",
+    "userInterfaceStyle": "dark",
+    "scheme": "mecook",
+    "splash": {
+      "image": "./assets/branding/mecook-logo.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.mecook.mobile",
+      "associatedDomains": ["applinks:mecook.app"]
+    },
+    "android": {
+      "package": "com.mecook.mobile",
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE",
+        "foregroundImage": "./assets/branding/mecook-logo.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "category": ["BROWSABLE", "DEFAULT"],
+          "data": [
+            {
+              "scheme": "https",
+              "host": "mecook.app",
+              "pathPrefix": "/recipe/"
+            }
+          ]
+        }
+      ]
+    },
+    "web": {
+      "favicon": "./assets/branding/mecook-logo.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      "expo-image",
+      "expo-video",
+      "expo-camera",
+      "expo-image-picker",
+      "expo-secure-store",
+      "expo-notifications"
+    ],
+    "updates": {
+      "url": "https://u.expo.dev/YOUR_EAS_PROJECT_ID"
+    },
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "YOUR_EAS_PROJECT_ID"
+      }
+    }
+  }
+}

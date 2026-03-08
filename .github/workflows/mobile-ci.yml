@@ -1,0 +1,26 @@
+name: me-cook-mobile-ci
+
+on:
+  push:
+    paths:
+      - "me-cook-mobile/**"
+      - ".github/workflows/mobile-ci.yml"
+  pull_request:
+    paths:
+      - "me-cook-mobile/**"
+
+jobs:
+  mobile-checks:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: me-cook-mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: me-cook-mobile/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck

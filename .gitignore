@@ -1,0 +1,26 @@
+# Local env and secrets (never commit)
+.env
+.env.*
+!.env.example
+
+# IDE
+.idea/
+*.iml
+
+# Android / Gradle
+build/
+.gradle/
+local.properties
+*.apk
+*.aab
+*.hprof
+.cxx/
+.externalNativeBuild/
+captures/
+
+# Node (root / subprojects)
+node_modules/
+
+# OS
+.DS_Store
+Thumbs.db

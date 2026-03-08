@@ -1,0 +1,323 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  USER
+  VERIFIED_CREATOR
+  ADMIN
+}
+
+enum ModerationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum RecipeVisibility {
+  PUBLIC
+  PRIVATE
+  UNLISTED
+}
+
+enum MediaType {
+  IMAGE
+  VIDEO
+}
+
+enum UploadJobStatus {
+  QUEUED
+  PROCESSING
+  READY
+  FAILED
+}
+
+enum UploadSessionStatus {
+  UPLOADING
+  ASSEMBLING
+  PROCESSING
+  READY
+  FAILED
+}
+
+enum NotificationType {
+  COMMENT
+  FOLLOW
+  MODERATION_APPROVED
+  MODERATION_REJECTED
+  GENERAL
+}
+
+model User {
+  id               String         @id @default(cuid())
+  email            String         @unique
+  passwordHash     String
+  displayName      String
+  bio              String?
+  countryCode      String?
+  preferredCuisines String[]      @default([])
+  onboardingCompleted Boolean     @default(false)
+  notifyCommentPush Boolean       @default(true)
+  notifyFollowPush  Boolean       @default(true)
+  notifyModerationPush Boolean    @default(true)
+  avatarUrl        String?
+  role             UserRole       @default(USER)
+  isActive         Boolean        @default(true)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  creatorProfile   CreatorProfile?
+  recipes          Recipe[]       @relation("RecipeAuthor")
+  moderatedRecipes Recipe[]       @relation("RecipeModeratedBy")
+  uploadedMedia    MediaAsset[]
+  uploadSessions   VideoUploadSession[]
+  comments         RecipeComment[]
+  reactions        RecipeReaction[]
+  savedRecipes     SavedRecipe[]
+  followers        CreatorFollow[] @relation("CreatorFollowers")
+  following        CreatorFollow[] @relation("CreatorFollowing")
+  reportsSubmitted ContentReport[] @relation("ReportSubmitter")
+  pushTokens       PushToken[]
+  notificationsReceived Notification[] @relation("NotificationRecipient")
+  notificationsSent     Notification[] @relation("NotificationActor")
+}
+
+model CreatorProfile {
+  id                 String           @id @default(cuid())
+  userId             String           @unique
+  user               User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  moderationStatus   ModerationStatus @default(PENDING)
+  reviewedByUserId   String?
+  reviewNotes        String?
+  reviewedAt         DateTime?
+  canPublish         Boolean          @default(false)
+  socialInstagram    String?
+  socialYoutube      String?
+  socialTiktok       String?
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+}
+
+model Recipe {
+  id                 String            @id @default(cuid())
+  authorId           String
+  author             User              @relation("RecipeAuthor", fields: [authorId], references: [id], onDelete: Restrict)
+  title              String
+  slug               String            @unique
+  summary            String?
+  cookTimeMinutes    Int
+  prepTimeMinutes    Int?
+  servings           Int
+  cuisine            String?
+  difficulty         String?
+  visibility         RecipeVisibility  @default(PUBLIC)
+  moderationStatus   ModerationStatus  @default(PENDING)
+  moderationNotes    String?
+  moderatedByUserId  String?
+  moderatedBy        User?             @relation("RecipeModeratedBy", fields: [moderatedByUserId], references: [id], onDelete: SetNull)
+  moderatedAt        DateTime?
+  isPublished        Boolean           @default(false)
+  publishedAt        DateTime?
+  heroImageUrl       String?
+  locale             String            @default("en")
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  ingredients        RecipeIngredient[]
+  steps              RecipeStep[]
+  tags               RecipeTag[]
+  mediaAssets        MediaAsset[]
+  comments           RecipeComment[]
+  reactions          RecipeReaction[]
+  saves              SavedRecipe[]
+  reports            ContentReport[]
+  notifications      Notification[]
+
+  @@index([authorId, publishedAt])
+  @@index([title, locale])
+  @@index([visibility, moderationStatus, publishedAt])
+  @@index([cuisine, difficulty])
+}
+
+model RecipeIngredient {
+  id          String   @id @default(cuid())
+  recipeId    String
+  recipe      Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  position    Int
+  itemName    String
+  quantity    String?
+  unit        String?
+  notes       String?
+
+  @@index([itemName])
+}
+
+model RecipeStep {
+  id             String      @id @default(cuid())
+  recipeId        String
+  recipe          Recipe      @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  position        Int
+  instruction     String
+  timerSeconds    Int?
+  outcomeHint     String?     // e.g. "Edges golden brown" or "Liquid reduced by half"
+  mediaAssetId    String?
+  mediaAsset      MediaAsset? @relation(fields: [mediaAssetId], references: [id], onDelete: SetNull)
+
+  @@index([recipeId, position])
+}
+
+model RecipeTag {
+  id        String   @id @default(cuid())
+  recipeId  String
+  recipe    Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  tag       String
+
+  @@index([tag])
+}
+
+model MediaAsset {
+  id              String          @id @default(cuid())
+  recipeId         String?
+  recipe           Recipe?         @relation(fields: [recipeId], references: [id], onDelete: SetNull)
+  uploaderId       String
+  uploader         User            @relation(fields: [uploaderId], references: [id], onDelete: Restrict)
+  type             MediaType
+  originalUrl      String
+  playbackUrl      String?
+  thumbnailUrl     String?
+  durationSeconds  Int?
+  width            Int?
+  height           Int?
+  uploadJobStatus  UploadJobStatus @default(QUEUED)
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  stepLinks        RecipeStep[]
+  uploadSession    VideoUploadSession?
+
+  @@index([uploaderId, createdAt])
+}
+
+model VideoUploadSession {
+  id             String            @id @default(cuid())
+  uploaderId     String
+  uploader       User              @relation(fields: [uploaderId], references: [id], onDelete: Cascade)
+  fileName       String
+  mimeType       String
+  totalBytes     Int
+  chunkSizeBytes Int
+  totalChunks    Int
+  uploadedChunks Int               @default(0)
+  status         UploadSessionStatus @default(UPLOADING)
+  assembledPath  String?
+  mediaAssetId   String?           @unique
+  mediaAsset     MediaAsset?       @relation(fields: [mediaAssetId], references: [id], onDelete: SetNull)
+  errorMessage   String?
+  expiresAt      DateTime
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  @@index([uploaderId, status, createdAt])
+}
+
+model Notification {
+  id           String           @id @default(cuid())
+  recipientId  String
+  recipient    User             @relation("NotificationRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  actorId      String?
+  actor        User?            @relation("NotificationActor", fields: [actorId], references: [id], onDelete: SetNull)
+  recipeId     String?
+  recipe       Recipe?          @relation(fields: [recipeId], references: [id], onDelete: SetNull)
+  type         NotificationType
+  title        String
+  body         String
+  data         Json?
+  readAt       DateTime?
+  createdAt    DateTime         @default(now())
+
+  @@index([recipientId, createdAt])
+  @@index([recipientId, readAt])
+}
+
+model PushToken {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token       String   @unique
+  platform    String
+  deviceLabel String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId, createdAt])
+}
+
+model RecipeComment {
+  id          String          @id @default(cuid())
+  recipeId     String
+  recipe       Recipe          @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  authorId     String
+  author       User            @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  parentId     String?
+  parent       RecipeComment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies      RecipeComment[] @relation("CommentReplies")
+  body         String
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  @@index([recipeId, createdAt])
+}
+
+model RecipeReaction {
+  id         String   @id @default(cuid())
+  recipeId    String
+  recipe      Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+
+  @@unique([recipeId, userId])
+}
+
+model SavedRecipe {
+  id         String   @id @default(cuid())
+  recipeId    String
+  recipe      Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+
+  @@unique([recipeId, userId])
+  @@index([userId, createdAt])
+}
+
+model CreatorFollow {
+  id          String   @id @default(cuid())
+  creatorId    String
+  followerId   String
+  creator      User     @relation("CreatorFollowers", fields: [creatorId], references: [id], onDelete: Cascade)
+  follower     User     @relation("CreatorFollowing", fields: [followerId], references: [id], onDelete: Cascade)
+  createdAt    DateTime @default(now())
+
+  @@unique([creatorId, followerId])
+}
+
+model ContentReport {
+  id             String   @id @default(cuid())
+  recipeId        String
+  recipe          Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  submitterId     String
+  submitter       User     @relation("ReportSubmitter", fields: [submitterId], references: [id], onDelete: Restrict)
+  reason          String
+  notes           String?
+  resolutionNotes String?
+  resolvedAt      DateTime?
+  createdAt       DateTime @default(now())
+}

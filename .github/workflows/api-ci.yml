@@ -1,0 +1,27 @@
+name: me-cook-api-ci
+
+on:
+  push:
+    paths:
+      - "me-cook-api/**"
+      - ".github/workflows/api-ci.yml"
+  pull_request:
+    paths:
+      - "me-cook-api/**"
+
+jobs:
+  api-checks:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: me-cook-api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: me-cook-api/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run build
