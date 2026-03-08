@@ -165,6 +165,7 @@ export function SideMenuProvider({ children }: { children: React.ReactNode }) {
                       <Text style={styles.menuLabel}>{item.label}</Text>
                     </Pressable>
                   ))}
+                </View>
 
                 <View style={styles.signOutWrap}>
                   <Pressable
