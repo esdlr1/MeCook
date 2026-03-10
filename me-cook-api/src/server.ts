@@ -55,7 +55,7 @@ app.use("/api/users", usersRouter);
 app.use(notFoundHandler);
 app.use(errorHandler);
 
-app.listen(env.PORT, () => {
+app.listen(env.PORT, "0.0.0.0", () => {
   // eslint-disable-next-line no-console
   console.log(`MeCook API running on port ${env.PORT}`);
 });
